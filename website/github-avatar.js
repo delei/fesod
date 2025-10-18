@@ -56,32 +56,6 @@ function fetchAvatarAsBase64(githubId) {
 }
 
 /**
- * Extracts GitHub user ID from GitHub avatar URL
- * @param {string} url - The GitHub avatar URL to parse
- * @returns {string|null} - The extracted user ID or null if extraction fails
- */
-function extractGitHubId(url) {
-    try {
-        // Validate if it's a valid GitHub avatar URL
-        if (!url.includes("avatars.githubusercontent.com/u/")) {
-            throw new Error("Not a valid GitHub avatar URL");
-        }
-
-        // Use regular expression to extract user ID
-        const regex = /avatars\.githubusercontent\.com\/u\/(\d+)/;
-        const match = url.match(regex);
-
-        if (match && match[1]) {
-            return match[1];
-        }
-        return null;
-    } catch (error) {
-        console.error("Error:", error.message);
-        return null;
-    }
-}
-
-/**
  * Processes a list of githubIds and adds avatar_base64 property
  * @param {Array} ids - Array of id
  * @returns {Promise<Array>} Array of avatar_base64
@@ -145,7 +119,7 @@ async function main() {
         console.log("\n==> Processing avatars");
         const avatarsArray = await processAvatars(uniqueGithubArray);
 
-        // 3. Write files
+        // 2. Write files
         console.log(`\n==> Write to ${avatarFile}`);
         fs.writeFileSync(avatarFile, JSON.stringify(avatarsArray, null, 2));
 
