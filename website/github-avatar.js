@@ -4,6 +4,7 @@ const https = require("https");
 const teamSrc = "src/pages/team/data/team.json";
 const avatarFile = "src/pages/team/data/github-avatar.json";
 const avatarSize = 100;
+const authorsFile = "blog/authors.json";
 
 /**
  * Generates a random delay between min and max milliseconds
@@ -56,6 +57,15 @@ function fetchAvatarAsBase64(githubId) {
 }
 
 /**
+ * Get GitHub name from URL
+ * @param {string} url - GitHub URL
+ * @returns {string} GitHub name
+ */
+function getGitName(url) {
+    return url.replace('https://github.com/', '');
+}
+
+/**
  * Processes a list of githubIds and adds avatar_base64 property
  * @param {Array} ids - Array of id
  * @returns {Promise<Array>} Array of avatar_base64
@@ -90,6 +100,30 @@ async function processAvatars(ids) {
 }
 
 /**
+ * Processes blog authors data and adds avatar_base64 property
+ * @param {Object} teamData - Team data
+ * @param {Array} avatars - Array of avatars
+ * @returns {Promise<Object>} Blog authors data
+ */
+async function processBlogAuthors(teamData, avatars) {
+    const blogAuthorsMapPath = {};
+    (teamData.pmc.concat(teamData.committer) || []).forEach((m) => {
+        const gitName = getGitName(m.gitUrl);
+        const avatarObj = avatars.find((item) => item.id === m.githubId);
+        blogAuthorsMapPath[gitName] = {
+            "name": m.name,
+            "url": m.gitUrl,
+            "image_url": "data:image/png;base64," + avatarObj.avatar_base64,
+            "socials": {
+                "github": gitName
+            }
+        }
+    });
+
+    return blogAuthorsMapPath;
+}
+
+/**
  * Main function
  */
 async function main() {
@@ -100,15 +134,8 @@ async function main() {
         console.log(`==> Reading ${teamSrc} file`);
         const teamSrcData = JSON.parse(fs.readFileSync(teamSrc, "utf8"));
 
-        // PMC
-        (teamSrcData.pmc || []).forEach((d) => {
-            if (d.githubId) {
-                uniqueGithubIdsSet.add(d.githubId);
-            }
-        });
-
-        // Committer
-        (teamSrcData.committer || []).forEach((d) => {
+        // PMC && Committer
+        (teamSrcData.pmc.concat(teamSrcData.committer) || []).forEach((d) => {
             if (d.githubId) {
                 uniqueGithubIdsSet.add(d.githubId);
             }
@@ -122,6 +149,11 @@ async function main() {
         // 2. Write files
         console.log(`\n==> Write to ${avatarFile}`);
         fs.writeFileSync(avatarFile, JSON.stringify(avatarsArray, null, 2));
+
+        // 3. Blog authors
+        const blogAuthorsMapPaths = await processBlogAuthors(teamSrcData, avatarsArray);
+        console.log(`\n==> Write to ${authorsFile}`);
+        fs.writeFileSync(authorsFile, JSON.stringify(blogAuthorsMapPaths, null, 2));
 
         console.log("\n✓ Done!");
     } catch (error) {
